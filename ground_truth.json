@@ -1,0 +1,208 @@
+{
+  "documents": [
+    {
+      "file": "Hartwell_-_Service_Order_Form_.pdf",
+      "ground_truth": {
+        "quote_metadata": {
+          "quote_id": null,
+          "quote_date": "10/2/2023",
+          "payment_terms": "Annual"
+        },
+        "vendor": {
+          "name": "Cloudbridge Communications LLC"
+        },
+        "customer": {
+          "name": "Hartwell Partners LLP"
+        },
+        "deal_structure": {
+          "is_subscription": true,
+          "subscription_term_months": 36,
+          "billing_frequency": "annual",
+          "auto_renew": true
+        },
+        "financials": {
+          "grand_total": 597312.00,
+          "financeable_total": 552012.00,
+          "subtotal": 552012.00
+        },
+        "line_item_count": 5,
+        "classifications": {
+          "Webex Suite EA Cloud Meetings": "software",
+          "Cisco Credit": "discount",
+          "Virtual Connect for Dedicated Instance": "software",
+          "Support Services": "service",
+          "Webex Calling Implementation": "labor"
+        },
+        "notes": "grand_total = ACV $552,012 + NRC $45,300. Financeable = ACV only, not NRC (labor). Two separate charge types: recurring and non-recurring."
+      }
+    },
+    {
+      "file": "RPA_Quote_Confirmation.pdf",
+      "ground_truth": {
+        "quote_metadata": {
+          "quote_id": "PTCH247",
+          "quote_date": "10/3/2024",
+          "payment_terms": "NET 30-VERBAL"
+        },
+        "vendor": {
+          "name": "TechSource"
+        },
+        "customer": {
+          "name": "Sterling Creative Group",
+          "contact_name": "Sarah Mitchell"
+        },
+        "deal_structure": {
+          "is_subscription": false,
+          "subscription_term_months": null,
+          "billing_frequency": "one-time",
+          "auto_renew": null
+        },
+        "financials": {
+          "subtotal": 291757.60,
+          "shipping": 2210.33,
+          "tax": 20465.02,
+          "grand_total": 314432.95,
+          "financeable_total": 291757.60
+        },
+        "line_item_count": 38,
+        "classifications_sample": {
+          "Cisco Catalyst switches": "hardware",
+          "Cisco SMARTnet": "service",
+          "Cisco DNA License": "software",
+          "Cisco rack mounting kit": "hardware",
+          "Cisco SFP transceivers": "hardware",
+          "Cisco wireless access points": "hardware"
+        },
+        "notes": "8 pages, 38 unique line items. Multiple duplicate product lines across location groups. Tax exempt 0% on software/services, 10.25% on hardware. Financeable = subtotal only, not tax or shipping."
+      }
+    },
+    {
+      "file": "Apex_Equipment_Quote.pdf",
+      "ground_truth": {
+        "quote_metadata": {
+          "quote_id": "QN-024891",
+          "quote_date": "7/11/2019",
+          "valid_until": "8/11/2019",
+          "payment_terms": "Wire Transfer / ACH / Company Check"
+        },
+        "vendor": {
+          "name": "Apex Network Solutions"
+        },
+        "customer": {
+          "name": "Westfield Properties",
+          "contact_name": "Carlos Rodriguez",
+          "email": "carlos@westfieldprops.net"
+        },
+        "deal_structure": {
+          "is_subscription": false,
+          "subscription_term_months": null,
+          "billing_frequency": "one-time",
+          "auto_renew": null
+        },
+        "financials": {
+          "subtotal": 24858.02,
+          "tax": 1905.17,
+          "shipping": 0.00,
+          "grand_total": 26763.19,
+          "financeable_total": 24858.02,
+          "msrp_total": 44116.99
+        },
+        "line_item_count": 9,
+        "classifications": {
+          "MX84-HW Meraki Security Appliance": "hardware",
+          "LIC-MI-M-3YR Meraki Insight License": "software",
+          "LIC-MX84-SEC-3YR Advanced Security License": "software",
+          "MS120-8LP Switch": "hardware",
+          "LIC-MS120-8LP-3YR Enterprise License": "software",
+          "MR74-HW Wireless Access Point": "hardware",
+          "MA-ANT-20 Dual-Band Omni Antenna": "hardware",
+          "MA-ANT-27 Dual Band Sector Antenna": "hardware",
+          "LIC-ENT-3YR MR Enterprise License": "software"
+        },
+        "notes": "CRITICAL EDGE CASE: Two price columns — MSRP ($44,116.99) and discounted price ($26,763.19). Correct price to finance is discounted. Agent must pick Ext Cost column, not Ext MSRP."
+      }
+    },
+    {
+      "file": "Citrus_Pricing_Proposal__1_.pdf",
+      "ground_truth": {
+        "quote_metadata": {
+          "quote_id": "25312235",
+          "quote_date": "10/3/2024",
+          "valid_until": "11/16/2024",
+          "payment_terms": null
+        },
+        "vendor": {
+          "name": "National Tech",
+          "contact_name": "Madalyn Webber",
+          "email": "Madalyn_Webber@nationaltech.com"
+        },
+        "customer": {
+          "name": "Pacific Citrus Inc",
+          "contact_name": "Diana Mendez",
+          "email": "dmendez@pacificcitrus.com"
+        },
+        "deal_structure": {
+          "is_subscription": true,
+          "subscription_term_months": 60,
+          "billing_frequency": "annual",
+          "auto_renew": null
+        },
+        "financials": {
+          "subtotal": 143391.60,
+          "tax": 0.00,
+          "grand_total": 143391.60,
+          "financeable_total": 143391.60
+        },
+        "line_item_count": 12,
+        "classifications": "all software — Meraki EA licenses and support",
+        "notes": "CRITICAL EDGE CASE: Price shown is ANNUALISED 5-year EA cost, not total contract value. Total contract value = $143,391.60 x 5 = $716,958. Agent must flag this ambiguity. Coverage term 11/22/2024–11/21/2029 = 60 months."
+      }
+    },
+    {
+      "file": "Network_Refresh_Quote.pdf",
+      "ground_truth": {
+        "quote_metadata": {
+          "quote_id": "28473",
+          "quote_date": null,
+          "valid_until": "February 12, 2026",
+          "payment_terms": null
+        },
+        "vendor": {
+          "name": "Premium IT Solutions",
+          "email": null
+        },
+        "customer": {
+          "name": "Beacon Associates",
+          "contact_name": "Marcus Chen",
+          "email": "mchen@beacon-associates.net"
+        },
+        "deal_structure": {
+          "is_subscription": false,
+          "subscription_term_months": null,
+          "billing_frequency": "one-time",
+          "auto_renew": null
+        },
+        "financials": {
+          "subtotal": 30800.00,
+          "tax": 1398.00,
+          "grand_total": 32198.00,
+          "labor_total": 7500.00,
+          "financeable_total": 23300.27,
+          "hardware_total": 9599.73,
+          "software_total": 13700.27
+        },
+        "line_item_count": 7,
+        "classifications": {
+          "Meraki MX67-HW Firewall": "hardware",
+          "Meraki MX95 Firewall": "hardware",
+          "Meraki MX67 3 Year FedRAMP License": "software",
+          "Meraki MX95 3 Year FedRAMP License": "software",
+          "Meraki MR46 Wireless Access Point": "hardware",
+          "Meraki MR 3 Year FedRAMP License": "software",
+          "Labor (Projects)": "labor"
+        },
+        "notes": "CRITICAL EDGE CASE: $7,500 labor line is NOT financeable. Financeable total = hardware ($9,599.73) + software ($13,700.27) = $23,300.00. Tax non-financeable. Labor billed separately on completion."
+      }
+    }
+  ]
+}

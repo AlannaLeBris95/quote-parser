@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QuoteParser — AI Vendor Quote Extraction</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0e0e0f;
+    --bg2: #161618;
+    --bg3: #1e1e21;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #f0efe8;
+    --text2: #9999a0;
+    --text3: #55555c;
+    --accent: #d4f57a;
+    --accent2: #9ef09e;
+    --accent-dim: rgba(212,245,122,0.12);
+    --red: #ff6b6b;
+    --amber: #f0c060;
+    --blue: #6ab0f5;
+    --blue-dim: rgba(106,176,245,0.12);
+    --mono: 'DM Mono', monospace;
+    --serif: 'Instrument Serif', serif;
+    --sans: 'DM Sans', sans-serif;
+    --radius: 10px;
+    --radius-lg: 16px;
+  }
+
+  html { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 15px; line-height: 1.6; }
+
+  body { min-height: 100vh; }
+
+  /* Layout */
+  .app { display: grid; grid-template-rows: auto 1fr; min-height: 100vh; }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background: rgba(14,14,15,0.92);
+    backdrop-filter: blur(12px);
+    z-index: 100;
+  }
+
+  .logo {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .logo-mark {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 22px;
+    color: var(--accent);
+    letter-spacing: -0.5px;
+  }
+
+  .logo-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .api-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .api-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    letter-spacing: 0.06em;
+  }
+
+  .api-input {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text);
+    width: 220px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .api-input:focus { border-color: var(--accent); }
+  .api-input::placeholder { color: var(--text3); }
+
+  .key-status {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--text3);
+    flex-shrink: 0;
+    transition: background 0.2s;
+  }
+  .key-status.active { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+
+  /* Main */
+  main { display: grid; grid-template-columns: 400px 1fr; height: calc(100vh - 61px); }
+
+  /* Left panel */
+  .left-panel {
+    border-right: 1px solid var(--border);
+    padding: 32px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    overflow-y: auto;
+  }
+
+  .panel-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .drop-zone {
+    border: 1.5px dashed var(--border2);
+    border-radius: var(--radius-lg);
+    padding: 32px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .drop-zone:hover, .drop-zone.drag {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  .drop-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+
+  .drop-icon {
+    font-size: 32px;
+    margin-bottom: 12px;
+    display: block;
+  }
+
+  .drop-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .drop-sub {
+    font-size: 12px;
+    color: var(--text3);
+  }
+
+  .file-chip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+
+  .file-chip-name { color: var(--text); font-weight: 500; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .file-chip-size { color: var(--text3); font-family: var(--mono); font-size: 11px; }
+
+  .btn-extract {
+    width: 100%;
+    padding: 13px;
+    background: var(--accent);
+    color: #0e0e0f;
+    border: none;
+    border-radius: var(--radius);
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .btn-extract:hover:not(:disabled) { background: #e2ff88; transform: translateY(-1px); }
+  .btn-extract:active:not(:disabled) { transform: translateY(0); }
+  .btn-extract:disabled { background: var(--bg3); color: var(--text3); cursor: not-allowed; transform: none; }
+
+  .btn-reset {
+    width: 100%;
+    padding: 10px;
+    background: transparent;
+    color: var(--text2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-family: var(--sans);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-reset:hover { border-color: var(--border2); color: var(--text); }
+
+  .status-bar {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 20px;
+  }
+
+  .spinner {
+    width: 12px; height: 12px;
+    border: 1.5px solid var(--border2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Info box */
+  .info-box {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+
+  .info-box p {
+    font-size: 12px;
+    color: var(--text2);
+    line-height: 1.6;
+  }
+
+  .info-box strong { color: var(--text); font-weight: 500; }
+
+  /* Right panel */
+  .right-panel {
+    overflow-y: auto;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    color: var(--text3);
+  }
+
+  .empty-glyph {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 64px;
+    color: var(--border2);
+    line-height: 1;
+  }
+
+  .empty-text {
+    font-size: 13px;
+    text-align: center;
+    max-width: 260px;
+    line-height: 1.7;
+  }
+
+  /* Results */
+  .result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .result-title {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 24px;
+    color: var(--text);
+  }
+
+  .timing-chip {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 10px;
+  }
+
+  .timing-chip.fast { color: var(--accent); border-color: rgba(212,245,122,0.2); }
+  .timing-chip.slow { color: var(--amber); border-color: rgba(240,192,96,0.2); }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 20px;
+  }
+
+  .tab {
+    padding: 8px 18px;
+    font-size: 13px;
+    color: var(--text3);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.15s;
+    font-weight: 400;
+  }
+
+  .tab:hover { color: var(--text2); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 500; }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Cards */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px 22px;
+    margin-bottom: 16px;
+  }
+
+  .card-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 16px;
+  }
+
+  .fields-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px 24px;
+  }
+
+  .field-label {
+    font-size: 11px;
+    color: var(--text3);
+    margin-bottom: 3px;
+    font-family: var(--mono);
+  }
+
+  .field-value {
+    font-size: 14px;
+    color: var(--text);
+    font-weight: 400;
+  }
+
+  .field-value.empty {
+    color: var(--text3);
+    font-style: italic;
+    font-size: 13px;
+  }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+  /* Financials */
+  .fin-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+
+  .fin-row:last-child { border-bottom: none; }
+  .fin-row.total { font-weight: 500; font-size: 15px; }
+  .fin-row.financeable { color: var(--accent); font-weight: 500; }
+  .fin-row.discount { color: var(--accent2); }
+
+  /* Line items table */
+  .li-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+
+  .li-table th {
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text3);
+    padding: 0 8px 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-weight: 400;
+  }
+
+  .li-table td {
+    padding: 10px 8px 10px 0;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    color: var(--text2);
+  }
+
+  .li-table tr:last-child td { border-bottom: none; }
+  .li-table td:first-child { color: var(--text); }
+
+  .item-name { font-size: 13px; line-height: 1.4; }
+  .item-id { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+  /* Badges */
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-family: var(--mono);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+
+  .badge-hw { background: rgba(106,176,245,0.15); color: var(--blue); border: 1px solid rgba(106,176,245,0.2); }
+  .badge-sw { background: rgba(212,245,122,0.12); color: var(--accent); border: 1px solid rgba(212,245,122,0.2); }
+  .badge-svc { background: rgba(153,153,160,0.15); color: var(--text2); border: 1px solid var(--border); }
+  .badge-labor { background: rgba(240,192,96,0.12); color: var(--amber); border: 1px solid rgba(240,192,96,0.2); }
+  .badge-other { background: var(--bg3); color: var(--text3); border: 1px solid var(--border); }
+
+  .fin-badge { display: inline-block; font-size: 10px; font-family: var(--mono); padding: 2px 7px; border-radius: 4px; }
+  .fin-yes { background: rgba(158,240,158,0.1); color: var(--accent2); }
+  .fin-no { color: var(--text3); }
+
+  /* Confidence */
+  .conf-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+
+  .conf-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+
+  .conf-label { font-family: var(--mono); font-size: 10px; color: var(--text3); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 8px; }
+
+  .conf-value {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 500;
+  }
+
+  .conf-high { color: var(--accent); }
+  .conf-med { color: var(--amber); }
+  .conf-low { color: var(--red); }
+
+  .conf-bar-bg { height: 3px; background: var(--border); border-radius: 2px; margin-top: 8px; }
+  .conf-bar { height: 3px; border-radius: 2px; transition: width 0.5s ease; }
+  .conf-bar.high { background: var(--accent); }
+  .conf-bar.med { background: var(--amber); }
+  .conf-bar.low { background: var(--red); }
+
+  .conf-reasoning {
+    background: var(--bg3);
+    border-left: 2px solid var(--border2);
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--text2);
+    line-height: 1.6;
+    border-radius: 0 var(--radius) var(--radius) 0;
+    margin-top: 4px;
+  }
+
+  /* Flags */
+  .flag-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    align-items: flex-start;
+  }
+
+  .flag-item:last-child { border-bottom: none; }
+
+  .flag-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    margin-top: 6px;
+    flex-shrink: 0;
+  }
+
+  .flag-warn { background: var(--amber); box-shadow: 0 0 4px var(--amber); }
+  .flag-info { background: var(--blue); box-shadow: 0 0 4px var(--blue); }
+
+  .flag-field { font-family: var(--mono); font-size: 11px; color: var(--text2); margin-bottom: 3px; }
+  .flag-msg { font-size: 13px; color: var(--text); }
+
+  /* Deal structure pill */
+  .deal-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--accent-dim);
+    border: 1px solid rgba(212,245,122,0.2);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    color: var(--accent);
+    font-family: var(--mono);
+    margin-top: 8px;
+  }
+
+  /* Raw JSON */
+  .raw-toggle {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    background: none;
+    border: none;
+    padding: 0;
+    display: block;
+    margin-top: 8px;
+  }
+
+  .raw-toggle:hover { color: var(--text2); }
+
+  .raw-json {
+    display: none;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.7;
+    color: var(--text2);
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 400px;
+    overflow-y: auto;
+    margin-top: 10px;
+  }
+
+  /* Subscription info */
+  .sub-info {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+
+  .sub-chip {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border2);
+    color: var(--text2);
+  }
+
+  .sub-chip.highlight {
+    border-color: rgba(212,245,122,0.3);
+    color: var(--accent);
+    background: var(--accent-dim);
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="logo">
+      <span class="logo-mark">QuoteParser</span>
+      <span class="logo-tag">AI extraction agent · v1.0</span>
+    </div>
+    <div class="api-row">
+      <span class="api-label">API KEY</span>
+      <input type="password" class="api-input" id="apiKey" placeholder="sk-ant-api03-..." oninput="checkKey()" autocomplete="off">
+      <div class="key-status" id="keyStatus"></div>
+    </div>
+  </header>
+
+  <main>
+    <div class="left-panel">
+      <div>
+        <p class="panel-title">Upload vendor quote</p>
+        <div class="drop-zone" id="dropzone">
+          <input type="file" accept=".pdf" onchange="handleFile(event)" id="fileInput">
+          <span class="drop-icon">⬆</span>
+          <p class="drop-title">Drop PDF here</p>
+          <p class="drop-sub">or click to browse</p>
+        </div>
+      </div>
+
+      <div id="fileChipWrap" style="display:none">
+        <p class="panel-title">Selected file</p>
+        <div class="file-chip">
+          <span style="font-size:16px">📄</span>
+          <span class="file-chip-name" id="fileName"></span>
+          <span class="file-chip-size" id="fileSize"></span>
+        </div>
+      </div>
+
+      <div>
+        <button class="btn-extract" id="extractBtn" onclick="runExtraction()" disabled>
+          Extract quote data
+        </button>
+        <div class="status-bar" id="statusBar" style="margin-top:10px"></div>
+      </div>
+
+      <button class="btn-reset" id="resetBtn" onclick="resetUI()" style="display:none">
+        Clear &amp; start over
+      </button>
+
+      <div class="info-box">
+        <p><strong>What this extracts</strong><br>Quote metadata · vendor &amp; customer details · all line items with hardware/software classification · financeable total · deal structure · confidence scores on high-stakes fields.</p>
+      </div>
+
+      <div class="info-box">
+        <p><strong>Your API key</strong> is used only in your browser to call the Anthropic API directly. It is never stored or transmitted anywhere else.</p>
+      </div>
+    </div>
+
+    <div class="right-panel" id="rightPanel">
+      <div class="empty-state" id="emptyState">
+        <span class="empty-glyph">∅</span>
+        <p class="empty-text">Upload a vendor quote PDF and hit extract to see structured finance data</p>
+      </div>
+
+      <div id="resultsWrap" style="display:none">
+        <div class="result-header">
+          <span class="result-title" id="resultTitle">Extraction result</span>
+          <span class="timing-chip" id="timingChip"></span>
+        </div>
+
+        <div class="tabs" style="margin-top:20px">
+          <div class="tab active" onclick="switchTab('overview')">Overview</div>
+          <div class="tab" onclick="switchTab('lineitems')">Line items</div>
+          <div class="tab" onclick="switchTab('confidence')">Confidence &amp; flags</div>
+        </div>
+
+        <div class="tab-panel active" id="tab-overview">
+          <div class="card">
+            <p class="card-title">Quote metadata</p>
+            <div class="fields-grid" id="metaFields"></div>
+          </div>
+
+          <div class="two-col">
+            <div class="card">
+              <p class="card-title">Vendor</p>
+              <div id="vendorFields"></div>
+            </div>
+            <div class="card">
+              <p class="card-title">Customer</p>
+              <div id="customerFields"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <p class="card-title">Deal structure</p>
+            <div id="dealFields"></div>
+          </div>
+
+          <div class="card">
+            <p class="card-title">Financials</p>
+            <div id="financialFields"></div>
+          </div>
+        </div>
+
+        <div class="tab-panel" id="tab-lineitems">
+          <div class="card">
+            <p class="card-title">Product line items</p>
+            <div style="overflow-x:auto">
+              <table class="li-table" id="lineItemsTable"></table>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-panel" id="tab-confidence">
+          <div class="card">
+            <p class="card-title">Confidence scores — high-stakes fields</p>
+            <div class="conf-grid" id="confGrid"></div>
+            <div class="conf-reasoning" id="confReasoning"></div>
+          </div>
+          <div class="card">
+            <p class="card-title">Flags for human review</p>
+            <div id="flagsList"></div>
+          </div>
+          <div class="card">
+            <p class="card-title">Raw output</p>
+            <button class="raw-toggle" onclick="toggleRaw()">Show raw JSON →</button>
+            <pre class="raw-json" id="rawJson"></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+let pdfBase64 = null;
+let result = null;
+
+function checkKey() {
+  const k = document.getElementById('apiKey').value.trim();
+  document.getElementById('keyStatus').className = 'key-status' + (k.startsWith('sk-ant') ? ' active' : '');
+  toggleExtractBtn();
+}
+
+function toggleExtractBtn() {
+  const hasKey = document.getElementById('apiKey').value.trim().startsWith('sk-ant');
+  const hasFile = pdfBase64 !== null;
+  document.getElementById('extractBtn').disabled = !(hasKey && hasFile);
+}
+
+const dz = document.getElementById('dropzone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag'); const f = e.dataTransfer.files[0]; if (f && f.name.endsWith('.pdf')) processFile(f); });
+
+function handleFile(e) { processFile(e.target.files[0]); }
+
+function processFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    pdfBase64 = e.target.result.split(',')[1];
+    document.getElementById('fileName').textContent = file.name;
+    document.getElementById('fileSize').textContent = (file.size / 1024).toFixed(0) + ' KB';
+    document.getElementById('fileChipWrap').style.display = 'block';
+    toggleExtractBtn();
+  };
+  reader.readAsDataURL(file);
+}
+
+async function runExtraction() {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if (!apiKey || !pdfBase64) return;
+
+  const btn = document.getElementById('extractBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Extracting...';
+  setStatus('Sending to Claude API...');
+  document.getElementById('resultsWrap').style.display = 'none';
+  document.getElementById('emptyState').style.display = 'flex';
+
+  const start = Date.now();
+
+  const prompt = `You are a vendor quote extraction agent for a B2B fintech platform. Extract all information from this vendor quote PDF and return ONLY a valid JSON object. No preamble, no markdown fences, just raw JSON.
+
+Schema:
+{
+  "quote_metadata": { "quote_id": string|null, "quote_date": string|null, "valid_until": string|null, "payment_terms": string|null },
+  "vendor": { "name": string|null, "address": string|null, "phone": string|null, "email": string|null },
+  "customer": { "name": string|null, "contact_name": string|null, "address": string|null, "phone": string|null, "email": string|null },
+  "deal_structure": { "is_subscription": boolean, "subscription_term_months": number|null, "billing_frequency": "annual"|"monthly"|"one-time"|null, "auto_renew": boolean|null },
+  "line_items": [{ "line_number": number, "item_name": string, "product_id": string|null, "sku": string|null, "quantity": number, "unit_price": number, "extended_price": number, "classification": "hardware"|"software"|"service"|"labor"|"discount"|"tax"|"shipping", "is_financeable": boolean, "notes": string|null }],
+  "financials": { "subtotal": number|null, "discount_total": number|null, "shipping": number|null, "tax": number|null, "grand_total": number|null, "financeable_total": number|null, "currency": "USD" },
+  "confidence": { "financeable_total": number (0-1), "classification": number (0-1), "deal_term": number (0-1), "reasoning": string },
+  "flags": [{ "type": "warning"|"info", "field": string, "message": string }]
+}
+
+Classification rules: hardware=physical devices/cables/accessories; software=licenses/subscriptions/SaaS; service=support contracts/maintenance; labor=professional services/installation; discount=credits/negative lines; tax=tax charges; shipping=freight.
+
+is_financeable: hardware=true; software/licenses=true; multi-year service contracts=true; monthly service=false; labor=false; discount/tax/shipping=false.
+
+financeable_total = sum of extended_price where is_financeable=true.
+
+Flag any: ambiguous pricing (e.g. two price columns), items that may not be financeable, missing critical fields, calculation discrepancies, subscription terms needing human confirmation.`;
+
+  try {
+    setStatus('Waiting for response...');
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 } },
+            { type: 'text', text: prompt }
+          ]
+        }]
+      })
+    });
+
+    const data = await res.json();
+    const elapsed = ((Date.now() - start) / 1000).toFixed(1);
+
+    if (data.error) throw new Error(data.error.message);
+
+    const text = data.content?.[0]?.text || '';
+    result = JSON.parse(text.replace(/```json|```/g, '').trim());
+
+    renderResults(result, parseFloat(elapsed));
+    setStatus('');
+    document.getElementById('resetBtn').style.display = 'block';
+
+  } catch (err) {
+    setStatus('Error: ' + err.message);
+    console.error(err);
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Extract quote data';
+  toggleExtractBtn();
+}
+
+function renderResults(d, elapsed) {
+  const title = d.vendor?.name || d.quote_metadata?.quote_id || 'Extracted quote';
+  document.getElementById('resultTitle').textContent = title;
+
+  const chip = document.getElementById('timingChip');
+  chip.textContent = elapsed + 's';
+  chip.className = 'timing-chip' + (elapsed <= 7 ? ' fast' : ' slow');
+
+  // Meta
+  document.getElementById('metaFields').innerHTML =
+    fld('Quote ID', d.quote_metadata?.quote_id) +
+    fld('Quote date', d.quote_metadata?.quote_date) +
+    fld('Valid until', d.quote_metadata?.valid_until) +
+    fld('Payment terms', d.quote_metadata?.payment_terms);
+
+  // Vendor
+  document.getElementById('vendorFields').innerHTML =
+    fld('Name', d.vendor?.name) + fld('Address', d.vendor?.address) + fld('Phone', d.vendor?.phone) + fld('Email', d.vendor?.email);
+
+  // Customer
+  document.getElementById('customerFields').innerHTML =
+    fld('Company', d.customer?.name) + fld('Contact', d.customer?.contact_name) + fld('Address', d.customer?.address) + fld('Email', d.customer?.email);
+
+  // Deal
+  const ds = d.deal_structure || {};
+  let dealHtml = '';
+  if (ds.is_subscription) {
+    dealHtml = `<div class="sub-info">
+      <span class="sub-chip highlight">Subscription</span>
+      ${ds.subscription_term_months ? `<span class="sub-chip highlight">${ds.subscription_term_months} months</span>` : ''}
+      ${ds.billing_frequency ? `<span class="sub-chip">${ds.billing_frequency} billing</span>` : ''}
+      ${ds.auto_renew === true ? `<span class="sub-chip">Auto-renews</span>` : ds.auto_renew === false ? `<span class="sub-chip">No auto-renew</span>` : ''}
+    </div>`;
+  } else {
+    dealHtml = `<span class="sub-chip" style="margin-top:4px;display:inline-block">One-time purchase</span>`;
+  }
+  document.getElementById('dealFields').innerHTML = dealHtml;
+
+  // Financials
+  const fi = d.financials || {};
+  let finHtml = '';
+  if (fi.subtotal != null) finHtml += finRow('Subtotal', fi.subtotal);
+  if (fi.discount_total != null && fi.discount_total !== 0) finHtml += `<div class="fin-row discount"><span>Discounts / credits</span><span>-${money(Math.abs(fi.discount_total))}</span></div>`;
+  if (fi.shipping != null && fi.shipping !== 0) finHtml += finRow('Shipping', fi.shipping);
+  if (fi.tax != null && fi.tax !== 0) finHtml += finRow('Tax', fi.tax);
+  if (fi.grand_total != null) finHtml += `<div class="fin-row total"><span>Grand total</span><span>${money(fi.grand_total)}</span></div>`;
+  if (fi.financeable_total != null) finHtml += `<div class="fin-row financeable"><span>Financeable total ↗</span><span>${money(fi.financeable_total)}</span></div>`;
+  document.getElementById('financialFields').innerHTML = finHtml;
+
+  // Line items
+  const items = d.line_items || [];
+  let tableHtml = `<thead><tr>
+    <th>Item</th><th>Qty</th><th>Unit price</th><th>Type</th><th>Ext. price</th><th>Financeable</th>
+  </tr></thead><tbody>`;
+  items.forEach(i => {
+    tableHtml += `<tr>
+      <td><div class="item-name">${i.item_name || '—'}</div><div class="item-id">${i.product_id || i.sku || ''}</div></td>
+      <td>${i.quantity ?? '—'}</td>
+      <td>${i.unit_price != null ? money(i.unit_price) : '—'}</td>
+      <td><span class="badge ${classBadge(i.classification)}">${i.classification || '?'}</span></td>
+      <td>${i.extended_price != null ? money(i.extended_price) : '—'}</td>
+      <td><span class="fin-badge ${i.is_financeable ? 'fin-yes' : 'fin-no'}">${i.is_financeable ? 'Yes' : 'No'}</span></td>
+    </tr>`;
+  });
+  tableHtml += '</tbody>';
+  document.getElementById('lineItemsTable').innerHTML = tableHtml;
+
+  // Confidence
+  const c = d.confidence || {};
+  document.getElementById('confGrid').innerHTML =
+    confCard('Financeable total', c.financeable_total) +
+    confCard('Classification', c.classification) +
+    confCard('Deal term', c.deal_term);
+  document.getElementById('confReasoning').textContent = c.reasoning || 'No additional notes.';
+
+  // Flags
+  const flags = d.flags || [];
+  document.getElementById('flagsList').innerHTML = flags.length
+    ? flags.map(f => `<div class="flag-item"><span class="flag-dot ${f.type === 'warning' ? 'flag-warn' : 'flag-info'}"></span><div><div class="flag-field">${f.field}</div><div class="flag-msg">${f.message}</div></div></div>`).join('')
+    : '<p style="font-size:13px;color:var(--text3);padding:8px 0">No flags raised — extraction looks clean.</p>';
+
+  // Raw
+  document.getElementById('rawJson').textContent = JSON.stringify(result, null, 2);
+
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('resultsWrap').style.display = 'block';
+  switchTab('overview');
+}
+
+function classBadge(c) {
+  if (c === 'hardware') return 'badge-hw';
+  if (c === 'software') return 'badge-sw';
+  if (c === 'service') return 'badge-svc';
+  if (c === 'labor') return 'badge-labor';
+  return 'badge-other';
+}
+
+function confCard(label, val) {
+  const pct = val != null ? Math.round(val * 100) : null;
+  const tier = pct == null ? '' : pct >= 85 ? 'high' : pct >= 65 ? 'med' : 'low';
+  return `<div class="conf-card">
+    <div class="conf-label">${label}</div>
+    <div class="conf-value conf-${tier}">${pct != null ? pct + '%' : 'N/A'}</div>
+    <div class="conf-bar-bg"><div class="conf-bar ${tier}" style="width:${pct || 0}%"></div></div>
+  </div>`;
+}
+
+function fld(label, val) {
+  const empty = val == null || val === '';
+  return `<div><div class="field-label">${label}</div><div class="field-value ${empty ? 'empty' : ''}">${empty ? 'not found' : val}</div></div>`;
+}
+
+function finRow(label, val) {
+  return `<div class="fin-row"><span>${label}</span><span>${money(val)}</span></div>`;
+}
+
+function money(n) { return n != null ? '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'; }
+
+function setStatus(msg) {
+  const el = document.getElementById('statusBar');
+  el.innerHTML = msg ? `<div class="spinner"></div><span style="font-size:11px;color:var(--text3)">${msg}</span>` : '';
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', ['overview', 'lineitems', 'confidence'][i] === name));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+function toggleRaw() {
+  const el = document.getElementById('rawJson');
+  el.style.display = el.style.display === 'block' ? 'none' : 'block';
+}
+
+function resetUI() {
+  pdfBase64 = null; result = null;
+  document.getElementById('fileChipWrap').style.display = 'none';
+  document.getElementById('fileName').textContent = '';
+  document.getElementById('fileInput').value = '';
+  document.getElementById('resultsWrap').style.display = 'none';
+  document.getElementById('emptyState').style.display = 'flex';
+  document.getElementById('resetBtn').style.display = 'none';
+  document.getElementById('statusBar').innerHTML = '';
+  document.getElementById('extractBtn').disabled = true;
+  document.getElementById('extractBtn').textContent = 'Extract quote data';
+}
+</script>
+</body>
+</html>
