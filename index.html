@@ -804,6 +804,7 @@ Flag any: ambiguous pricing (e.g. two price columns), items that may not be fina
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 8000,
+        temperature: 0,
         messages: [{
           role: 'user',
           content: [
