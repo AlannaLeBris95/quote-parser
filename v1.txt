@@ -26,4 +26,18 @@ Line item rules:
 - The financeable_total must be calculated from the discounted extended prices only, never from MSRP values
 - Do not create discount line items to represent the difference between MSRP and discounted price — this difference is not a line item, it is simply the discount already reflected in the discounted price
 
+Example - how to handle two price columns:
+If you see a document with columns like this:
+  SKU | Product | MSRP | Cost | Qty | Ext. MSRP | Ext Cost
+  MX84-HW | Meraki MX84 | $1,995.00 | $1,216.95 | 1 | $1,995.00 | $1,216.95
+
+You MUST extract:
+  unit_price: 1216.95  (the Cost column, NOT the MSRP column)
+  extended_price: 1216.95  (the Ext Cost column, NOT the Ext. MSRP column)
+
+The financeable_total is the sum of all Ext Cost values only.
+MSRP values must never appear anywhere in your output.
+The document may show "MSRP Subtotal: $40,973" and "Discounted Subtotal: $24,858" — 
+the correct subtotal and financeable_total is $24,858, never $40,973.
+
 Flag any: ambiguous pricing (e.g. two price columns detected), items that may not be financeable, missing critical fields, calculation discrepancies, subscription terms needing human confirmation.
