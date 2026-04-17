@@ -25,6 +25,7 @@ Line item rules:
 - If a document has two price columns (e.g. MSRP/list price AND a discounted/sale/cost price), you MUST use the discounted/lower price for BOTH unit_price and extended_price on every line item. Never use MSRP or list price as the basis for any calculation.
 - The financeable_total must be calculated from the discounted extended prices only, never from MSRP values
 - Do not create discount line items to represent the difference between MSRP and discounted price — this difference is not a line item, it is simply the discount already reflected in the discounted price
+- Do NOT deduplicate line items. If the same product appears multiple times in the document, extract each occurrence as a separate line item. Each row in the table is a separate purchase even if the product name and SKU are identical. The same SKU appearing 5 times means 5 separate line items.
 
 Example - how to handle two price columns:
 If you see a document with columns like this:
