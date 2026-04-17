@@ -789,7 +789,15 @@ is_financeable: hardware=true; software/licenses=true; multi-year service contra
 
 financeable_total = sum of extended_price where is_financeable=true.
 
-Flag any: ambiguous pricing (e.g. two price columns), items that may not be financeable, missing critical fields, calculation discrepancies, subscription terms needing human confirmation.`;
+Line item rules:
+- Only include individual products or services as line items
+- NEVER include summary rows, subtotals, totals or grand totals as line items
+- Rows labelled "subtotal", "total", "grand total", "tax total", "discounted total", "MSRP total", "MSRP subtotal" belong in the financials object only, never as line items
+- If a document has two price columns (e.g. MSRP/list price AND a discounted/sale/cost price), you MUST use the discounted/lower price for BOTH unit_price and extended_price on every line item. Never use MSRP or list price as the basis for any calculation.
+- The financeable_total must be calculated from the discounted extended prices only, never from MSRP values
+- Do not create discount line items to represent the difference between MSRP and discounted price — this difference is not a line item, it is simply the discount already reflected in the discounted price
+
+Flag any: ambiguous pricing (e.g. two price columns detected), items that may not be financeable, missing critical fields, calculation discrepancies, subscription terms needing human confirmation.`;
 
   try {
     setStatus('Waiting for response...');
@@ -822,6 +830,21 @@ Flag any: ambiguous pricing (e.g. two price columns), items that may not be fina
 
     const text = data.content?.[0]?.text || '';
     result = JSON.parse(text.replace(/```json|```/g, '').trim());
+
+    // Post-processing: strip summary rows that leaked into line items
+    const summaryKeywords = ['subtotal', 'grand total', 'msrp total', 'msrp subtotal', 'discounted total', 'discounted subtotal', 'tax total', 'shipping total'];
+    if (result.line_items) {
+      result.line_items = result.line_items.filter(item => {
+        const name = (item.item_name || '').toLowerCase();
+        return !summaryKeywords.some(keyword => name.includes(keyword));
+      });
+      result.financials = result.financials || {};
+      result.financials.financeable_total = Math.round(
+        result.line_items
+          .filter(item => item.is_financeable)
+          .reduce((sum, item) => sum + (item.extended_price || 0), 0) * 100
+      ) / 100;
+    }
 
     renderResults(result, parseFloat(elapsed));
     setStatus('');
