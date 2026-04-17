@@ -18,4 +18,10 @@ is_financeable: hardware=true; software/licenses=true; multi-year service contra
 
 financeable_total = sum of extended_price where is_financeable=true.
 
-Flag any: ambiguous pricing (e.g. two price columns), items that may not be financeable, missing critical fields, calculation discrepancies, subscription terms needing human confirmation.
+Line item rules:
+- Only include individual products or services as line items
+- NEVER include summary rows, subtotals, totals or grand totals as line items
+- If a document has two price columns (e.g. MSRP and discounted/sale price), always extract the lower discounted price as unit_price and extended_price
+- Rows labelled "subtotal", "total", "grand total", "tax total", "discounted total" belong in the financials object only, never as line items
+
+Flag any: ambiguous pricing (e.g. two price columns detected), items that may not be financeable, missing critical fields, calculation discrepancies, subscription terms needing human confirmation.
