@@ -21,7 +21,9 @@ financeable_total = sum of extended_price where is_financeable=true.
 Line item rules:
 - Only include individual products or services as line items
 - NEVER include summary rows, subtotals, totals or grand totals as line items
-- If a document has two price columns (e.g. MSRP and discounted/sale price), always extract the lower discounted price as unit_price and extended_price
-- Rows labelled "subtotal", "total", "grand total", "tax total", "discounted total" belong in the financials object only, never as line items
+- Rows labelled "subtotal", "total", "grand total", "tax total", "discounted total", "MSRP total", "MSRP subtotal" belong in the financials object only, never as line items
+- If a document has two price columns (e.g. MSRP/list price AND a discounted/sale/cost price), you MUST use the discounted/lower price for BOTH unit_price and extended_price on every line item. Never use MSRP or list price as the basis for any calculation.
+- The financeable_total must be calculated from the discounted extended prices only, never from MSRP values
+- Do not create discount line items to represent the difference between MSRP and discounted price — this difference is not a line item, it is simply the discount already reflected in the discounted price
 
 Flag any: ambiguous pricing (e.g. two price columns detected), items that may not be financeable, missing critical fields, calculation discrepancies, subscription terms needing human confirmation.
